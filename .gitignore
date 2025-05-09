@@ -1,0 +1,26 @@
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.venv/
+
+# Configuration - sensitive
+config.ini
+
+# Session file - sensitive
+my_telegram_session.session
+*.session
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 
