@@ -105,7 +105,7 @@ async def run_listener(client: TelegramClient):
             logger.info(f"==== TARGET TOPIC MESSAGE from {sender_name} ====")
             logger.info(f"  Original Text: {message.text}")
             
-            parsed_offer = parseo_message_for_offer(message.text)
+            parsed_offer = parse_message_for_offer(message.text)
             
             if parsed_offer:
                 logger.info(f"  Parsed Offer: {parsed_offer}")

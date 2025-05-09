@@ -5,5 +5,5 @@
 5. [x] Implement Notification System (DM to user)
 6. [-] Basic Offer Assistance Feature (Skipped/Deferred by user request)
 7. [x] Packaging & Initial Deployment Guide (config file, file logging, run continuously guide)
-8. [-] Testing and Refinement (Ongoing, focused after M7)
-9. [-] Documentation Update (final pass after M7) 
+8. [>] Testing and Refinement (Ongoing - collect live data and feedback for parser improvement)
+9. [-] Documentation Update (final pass after initial testing period) 

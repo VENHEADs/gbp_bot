@@ -4,11 +4,11 @@ This project aims to create an automated system to monitor a Telegram group for 
 
 ## System Architecture Overview
 
-The system will access Telegram by emulating a user account using the Telethon library. This allows access to private groups that the user account is a member of. The system is configured to listen to a specific group ID and, if the group uses topics, a specific topic ID within that group. Configuration is managed via a `config.ini` file. Logging is directed to both the console and a rotating file (`bot.log`).
+The system will access Telegram by emulating a user account using the Telethon library. This allows access to private groups that the user account is a member of. The system is configured to listen to a specific group ID and, if the group uses topics, a specific topic ID within that group. Configuration is managed via a `config.ini` file. Logging is directed to both the console and a rotating file (`bot.log`). The main script is `offer_monitor_bot.py`.
 
 # Module Map
 
-*   `main.py`: Orchestrates the components, handles Telegram client connection, event listening, notifications, configuration loading, and logging setup.
+*   `offer_monitor_bot.py`: Orchestrates the components, handles Telegram client connection, event listening, notifications, configuration loading, and logging setup.
 *   `message_parser.py`: Responsible for analyzing message content to identify relevant offers based on keywords, currency mentions, and amounts.
 *   `config.ini`: Stores user-specific credentials and bot settings (not committed to Git).
 *   `config.example.ini`: Template for `config.ini`.
@@ -50,7 +50,7 @@ The system will access Telegram by emulating a user account using the Telethon l
     ```
 2.  **Run the main script**:
     ```bash
-    python main.py
+    python offer_monitor_bot.py
     ```
     *   The first time you run it after configuring `config.ini` (or if the `.session` file is deleted), you may be prompted for a login code sent to your Telegram account and your 2FA password if enabled.
     *   A session file (e.g., `my_telegram_session.session`) will be created to store login information.
@@ -68,15 +68,15 @@ To keep the script running on your local machine even after you close the termin
 2.  Navigate to the project directory: `cd /path/to/your/Telegram Bot`
 3.  Run the script with `nohup`:
     ```bash
-    nohup python main.py > bot_console.log 2>&1 &
+    nohup python offer_monitor_bot.py > bot_console.log 2>&1 &
     ```
-    *   `python main.py`: Your command.
+    *   `python offer_monitor_bot.py`: Your command.
     *   `> bot_console.log`: Redirects standard output (prints from the script that would go to console) to `bot_console.log`.
     *   `2>&1`: Redirects standard error (error messages) to the same place as standard output.
     *   `&`: Runs the command in the background.
 4.  You can then close the terminal. The script will keep running.
 5.  To check its output, you can view `bot_console.log` and `bot.log` (our application log).
-6.  To stop a `nohup` process: find its Process ID (PID) using `ps aux | grep main.py` and then use `kill <PID>`.
+6.  To stop a `nohup` process: find its Process ID (PID) using `ps aux | grep offer_monitor_bot.py` and then use `kill <PID>`.
 
 **Using `screen`:**
 
@@ -88,7 +88,7 @@ To keep the script running on your local machine even after you close the termin
     ```bash
     source .venv/bin/activate
     cd /path/to/your/Telegram Bot
-    python main.py
+    python offer_monitor_bot.py
     ```
 4.  **Detach from the screen session**: Press `Ctrl+A` then `Ctrl+D`. The script continues running in this detached session.
 5.  You can now close your main terminal.
@@ -102,7 +102,9 @@ Choose the method (`nohup` or `screen`) that you find more convenient.
 
 # Change Log
 
-*   **YYYY-MM-DD**: Initial setup of Telegram connection (`main.py`) and project documentation (`documentation.md`, `project_milestones.md`).
-*   **YYYY-MM-DD**: Implemented message listener in `main.py` for specific group/topic.
-*   **YYYY-MM-DD**: Added `message_parser.py` for offer detection; integrated into `main.py`; implemented DM notifications.
-*   **YYYY-MM-DD**: Moved credentials to `config.ini`; added file logging; provided instructions for continuous local execution. 
+*   **YYYY-MM-DD**: Initial setup of Telegram connection and project documentation.
+*   **YYYY-MM-DD**: Implemented message listener for specific group/topic.
+*   **YYYY-MM-DD**: Added `message_parser.py`; integrated parsing; implemented DM notifications.
+*   **YYYY-MM-DD**: Moved credentials to `config.ini`; added file logging; provided local execution guide.
+*   **2024-05-09**: Initialized Git repository. Committed first functional version.
+*   **2024-05-09**: Renamed main script from `main.py` to `offer_monitor_bot.py` for clarity. 
