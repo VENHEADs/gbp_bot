@@ -202,10 +202,12 @@ async def run_listener(client: TelegramClient):
                 sender_id = sender.id if sender else None
                 sender_username = getattr(sender, 'username', None)
 
-                # Check if this is a ruble buying offer that should trigger auto-response
-                should_auto_respond = (offer_type == "counterparty_buys_rub" and 
-                                     confidence in ["high", "medium"] and 
-                                     sender_id is not None)
+                # Check if this is an offer we should auto-respond to
+                # Respond to both: people buying rubles OR people selling GBP (we want to buy their GBP)
+                should_auto_respond = ((offer_type == "counterparty_buys_rub" or 
+                                       offer_type == "counterparty_sells_gbp") and 
+                                      confidence in ["high", "medium"] and 
+                                      sender_id is not None)
 
                 if should_auto_respond:
                     # Send auto-response to the person looking to buy rubles
@@ -213,7 +215,7 @@ async def run_listener(client: TelegramClient):
                     
                     try:
                         await client.send_message(sender_id, auto_response_text)
-                        logger.info(f"Auto-response sent to {sender_name} (ID: {sender_id}) for ruble buying offer.")
+                        logger.info(f"Auto-response sent to {sender_name} (ID: {sender_id}) for {offer_type} offer.")
                     except Exception as e:
                         logger.error(f"Failed to send auto-response to {sender_name} (ID: {sender_id}): {e}")
                         # If auto-response fails, fall back to notification to bot owner
