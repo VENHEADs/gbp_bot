@@ -10,6 +10,10 @@ if pgrep -f "python offer_monitor_bot.py" > /dev/null; then
     exit 1
 fi
 
+# Clean up old log files for fresh start
+echo "Cleaning up old log files..."
+rm -f bot.log bot.log.* bot_console.log
+
 # Start the bot with nohup
 nohup python offer_monitor_bot.py > bot_console.log 2>&1 &
 
