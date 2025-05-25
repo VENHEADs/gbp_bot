@@ -116,6 +116,25 @@ This creates an authorized session file in `sessions/` directory that will be us
 
 To keep the script running on your local machine even after you close the terminal or get disconnected, you can use tools like `nohup` or `screen`.
 
+**Using the provided run_bot.sh script (Recommended):**
+
+We've included a convenient script that handles nohup execution for you:
+
+```bash
+# Make the script executable (first time only)
+chmod +x run_bot.sh
+
+# Run the bot in background
+./run_bot.sh
+```
+
+This script will:
+- Check if the bot is already running
+- Start the bot with nohup in the background
+- Save the process ID to `bot.pid`
+- Direct console output to `bot_console.log`
+- Show you how to monitor logs and stop the bot
+
 **Using `nohup` (No Hang Up):**
 
 `nohup` runs a command immune to hangups, with output to a `nohup.out` file by default if not redirected.
@@ -165,4 +184,7 @@ Choose the method (`nohup` or `screen`) that you find more convenient.
 *   **2024-05-09**: Initialized Git repository. Committed first functional version.
 *   **2024-05-09**: Renamed main script from `main.py` to `offer_monitor_bot.py` for clarity.
 *   **2025-01-XX**: Implemented auto-response feature - bot now automatically sends Russian message to users looking to buy rubles instead of just notifying bot owner. Added intelligent filtering to only respond to 'counterparty_buys_rub' offers with high/medium confidence. Added error handling and fallback to notifications if auto-response fails.
-*   **2025-01-XX**: Added Railway cloud deployment support - migrated config to environment variables, implemented session file persistence, created Dockerfile and railway.toml, added deployment scripts and documentation for 24/7 cloud hosting. 
+*   **2025-01-XX**: Added Railway cloud deployment support - migrated config to environment variables, implemented session file persistence, created Dockerfile and railway.toml, added deployment scripts and documentation for 24/7 cloud hosting.
+*   **2025-05-25**: SECURITY FIX - Removed exposed session_base64.txt from public repository, revoked compromised session, created new secure session. Updated .gitignore to properly exclude all sensitive files. Added env_vars.example.json template.
+*   **2025-05-25**: Railway deployment fixes - removed problematic healthcheck configuration, added .dockerignore to optimize builds, improved session restoration from SESSION_BASE64 environment variable with better error handling.
+*   **2025-05-25**: Added convenience scripts - run_bot.sh for nohup execution, improved local development workflow. Fixed session file locking issues. 
