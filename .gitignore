@@ -9,9 +9,10 @@ __pycache__/
 # Configuration - sensitive
 config.ini
 
-# Session file - sensitive
+# Session files - sensitive (NEVER commit these!)
 my_telegram_session.session
 *.session
+sessions/
 
 # Log files
 *.log
