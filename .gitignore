@@ -2,26 +2,41 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
-# Environment
+# Virtual Environment
 .venv/
+venv/
+env/
+ENV/
 
 # Configuration - sensitive
 config.ini
+.env
 env_vars.json
 
 # Session files - sensitive (NEVER commit these!)
 my_telegram_session.session
 *.session
+*.session-journal
 sessions/
 session_base64.txt
 
-# Log files
+# Logs
 *.log
+logs/
 bot_console.log
 
 # Process management
 bot.pid
+*.pid
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor/
 
 # OS generated files
 .DS_Store
@@ -30,4 +45,12 @@ bot.pid
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Docker
+.dockerignore.local
+
+# Backup files
+*.backup
+*.bak
+*~ 
