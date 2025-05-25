@@ -8,6 +8,7 @@ __pycache__/
 
 # Configuration - sensitive
 config.ini
+env_vars.json
 
 # Session files - sensitive (NEVER commit these!)
 my_telegram_session.session
