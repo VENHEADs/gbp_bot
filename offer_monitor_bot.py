@@ -59,23 +59,43 @@ def load_config():
     print("✅ Configuration loaded from config.ini")
     return cfg
 
-def setup_session_from_env():
+def setup_session_from_env(session_name):
     """Decode base64 session from environment variable if available"""
     session_b64 = os.getenv('SESSION_BASE64')
-    if session_b64:
-        try:
-            import base64
-            session_data = base64.b64decode(session_b64)
-            os.makedirs('sessions', exist_ok=True)
-            session_path = os.path.join('sessions', config['session_name'] + '.session')
-            with open(session_path, 'wb') as f:
-                f.write(session_data)
-            print("✅ Session restored from environment variable")
+    if not session_b64:
+        print("No SESSION_BASE64 environment variable found")
+        return False
+        
+    try:
+        import base64
+        print(f"Found SESSION_BASE64 environment variable (length: {len(session_b64)})")
+        
+        # Decode base64 data
+        session_data = base64.b64decode(session_b64)
+        print(f"Successfully decoded base64 data (size: {len(session_data)} bytes)")
+        
+        # Create sessions directory
+        os.makedirs('sessions', exist_ok=True)
+        
+        # Write session file
+        session_path = os.path.join('sessions', session_name + '.session')
+        with open(session_path, 'wb') as f:
+            f.write(session_data)
+        
+        # Verify file was written
+        if os.path.exists(session_path):
+            file_size = os.path.getsize(session_path)
+            print(f"✅ Session restored from environment variable to {session_path} ({file_size} bytes)")
             return True
-        except Exception as e:
-            print(f"🔴 Failed to restore session from environment: {e}")
+        else:
+            print(f"🔴 Failed to write session file to {session_path}")
             return False
-    return False
+            
+    except Exception as e:
+        print(f"🔴 Failed to restore session from environment: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 config = load_config()
 
@@ -120,11 +140,21 @@ if not os.path.exists(sessions_dir):
     os.makedirs(sessions_dir)
     logger.info(f"Created sessions directory: {sessions_dir}")
 
-# Restore session from environment if available
-setup_session_from_env()
-
 # Use sessions directory for session file
 session_path = os.path.join(sessions_dir, SESSION_NAME)
+
+# Restore session from environment if available (MUST happen before TelegramClient creation)
+session_restored = setup_session_from_env(SESSION_NAME)
+if session_restored:
+    logger.info("Session successfully restored from environment variable")
+else:
+    logger.info("No session restoration needed (running locally or session already exists)")
+
+# Check if session file exists after restoration attempt
+if os.path.exists(session_path):
+    logger.info(f"Session file found at: {session_path}")
+else:
+    logger.warning(f"No session file at: {session_path}")
 
 async def run_listener(client: TelegramClient):
     logger.info(f"Listening to Group ID: {TARGET_GROUP_ID}, specifically for Topic ID: {TARGET_TOPIC_ID}")
@@ -233,7 +263,13 @@ async def main():
     client = TelegramClient(session_path, API_ID, API_HASH)
 
     try:
+        logger.info("Initializing Telegram client...")
+        logger.info(f"Session path: {session_path}")
+        logger.info(f"Session file exists: {os.path.exists(session_path)}")
+        
         await client.connect()
+        logger.info("Connected to Telegram successfully")
+        
         if not await client.is_user_authorized():
             # Check if running locally (config.ini exists) or in cloud (env vars)
             is_local_run = os.path.exists('config.ini') and not os.getenv('API_ID')
@@ -253,7 +289,12 @@ async def main():
                     return
                 logger.info("Re-authorized successfully.")
             else:
-                logger.error("Session not authorized. Please check SESSION_BASE64 environment variable.")
+                logger.error("Session not authorized. This indicates a problem with session restoration.")
+                logger.error(f"Session file exists: {os.path.exists(session_path)}")
+                if os.path.exists(session_path):
+                    logger.error(f"Session file size: {os.path.getsize(session_path)} bytes")
+                logger.error("For Railway deployment, session must be pre-authorized and properly restored.")
+                logger.error("Check that SESSION_BASE64 environment variable is correctly set.")
                 return
         else:
             logger.info("User is already authorized.")

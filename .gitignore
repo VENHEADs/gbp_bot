@@ -13,6 +13,7 @@ config.ini
 my_telegram_session.session
 *.session
 sessions/
+session_base64.txt
 
 # Log files
 *.log
