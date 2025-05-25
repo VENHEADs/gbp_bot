@@ -144,7 +144,9 @@ if not os.path.exists(sessions_dir):
 session_path = os.path.join(sessions_dir, SESSION_NAME)
 
 # Restore session from environment if available (MUST happen before TelegramClient creation)
-session_restored = setup_session_from_env(SESSION_NAME)
+# Temporarily disabled for Railway deployment - SESSION_BASE64 too large
+# session_restored = setup_session_from_env(SESSION_NAME)
+session_restored = False
 if session_restored:
     logger.info("Session successfully restored from environment variable")
 else:

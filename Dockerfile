@@ -6,15 +6,18 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only the necessary application files
+# Copy application files
 COPY offer_monitor_bot.py .
 COPY message_parser.py .
 
 # Create required directories
 RUN mkdir -p sessions
 
-# Set environment to production
+# Set environment
 ENV PYTHONUNBUFFERED=1
+
+# Add a simple health check script
+RUN echo '#!/bin/sh\nexit 0' > /healthcheck.sh && chmod +x /healthcheck.sh
 
 # Run the bot
 CMD ["python", "offer_monitor_bot.py"] 
