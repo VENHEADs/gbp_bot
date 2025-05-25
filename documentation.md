@@ -1,10 +1,19 @@
 # Project Overview
 
-This project aims to create an automated system to monitor a Telegram group for currency exchange offers (specifically buying RUB or selling GBP) and notify the user, assisting in quickly responding to or creating offers.
+This project aims to create an automated system to monitor a Telegram group for currency exchange offers (specifically buying RUB or selling GBP) and automatically respond to potential trading partners. The system now includes an auto-response feature that directly messages users looking to buy rubles with a Russian message offering to sell rubles.
 
 ## System Architecture Overview
 
-The system will access Telegram by emulating a user account using the Telethon library. This allows access to private groups that the user account is a member of. The system is configured to listen to a specific group ID and, if the group uses topics, a specific topic ID within that group. Configuration is managed via a `config.ini` file. Logging is directed to both the console and a rotating file (`bot.log`). The main script is `offer_monitor_bot.py`.
+The system will access Telegram by emulating a user account using the Telethon library. This allows access to private groups that the user account is a member of. The system is configured to listen to a specific group ID and, if the group uses topics, a specific topic ID within that group. 
+
+**Key Features:**
+- **Message Monitoring**: Listens to a specific Telegram group/topic for currency exchange offers
+- **Intelligent Parsing**: Analyzes messages to identify ruble buying offers with high confidence
+- **Auto-Response**: Automatically sends a Russian message to users looking to buy rubles: "Привет, если рубли еще нужны, скажи пожалуйста куда перевести, в течении часа переведу"
+- **Fallback Notifications**: For non-ruble-buying offers or failed auto-responses, sends notifications to the bot owner
+- **Error Handling**: Gracefully handles failed message deliveries and logs all activity
+
+Configuration is managed via a `config.ini` file. Logging is directed to both the console and a rotating file (`bot.log`). The main script is `offer_monitor_bot.py`.
 
 # Module Map
 
@@ -17,6 +26,53 @@ The system will access Telegram by emulating a user account using the Telethon l
 *   `bot.log`: Log output file (not committed to Git).
 
 # How to Run
+
+## Railway Cloud Deployment
+
+### Prerequisites
+1. **Railway Account**: Sign up at [railway.app](https://railway.app)
+2. **GitHub Repository**: Push your code to GitHub
+3. **Authorized Session**: Run session authorization locally first
+
+### Step 1: Authorize Session Locally
+Before deploying to Railway, you must authorize your Telegram session locally:
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run session authorization script
+python authorize_session.py
+```
+
+This creates an authorized session file in `sessions/` directory that will be used by Railway.
+
+### Step 2: Deploy to Railway
+1. **Connect Repository**:
+   - Go to [railway.app](https://railway.app) and create new project
+   - Connect your GitHub repository
+   - Railway will auto-detect the Dockerfile
+
+2. **Set Environment Variables**:
+   In Railway dashboard, add these environment variables:
+   ```
+   API_ID=your_api_id_here
+   API_HASH=your_api_hash_here
+   PHONE_NUMBER=your_phone_number_here
+   TARGET_GROUP_ID=your_target_group_id_here
+   TARGET_TOPIC_ID=your_target_topic_id_here
+   NOTIFY_USER_ID=your_notify_user_id_here
+   SESSION_NAME=my_telegram_session
+   ```
+
+3. **Deploy**:
+   - Railway will automatically build and deploy your bot
+   - Monitor logs in Railway dashboard to ensure successful startup
+
+### Step 3: Monitor Deployment
+- Check Railway logs for successful Telegram connection
+- Verify bot responds to messages in your target group
+- Monitor auto-response functionality
 
 ## Initial Setup
 
@@ -107,4 +163,6 @@ Choose the method (`nohup` or `screen`) that you find more convenient.
 *   **YYYY-MM-DD**: Added `message_parser.py`; integrated parsing; implemented DM notifications.
 *   **YYYY-MM-DD**: Moved credentials to `config.ini`; added file logging; provided local execution guide.
 *   **2024-05-09**: Initialized Git repository. Committed first functional version.
-*   **2024-05-09**: Renamed main script from `main.py` to `offer_monitor_bot.py` for clarity. 
+*   **2024-05-09**: Renamed main script from `main.py` to `offer_monitor_bot.py` for clarity.
+*   **2025-01-XX**: Implemented auto-response feature - bot now automatically sends Russian message to users looking to buy rubles instead of just notifying bot owner. Added intelligent filtering to only respond to 'counterparty_buys_rub' offers with high/medium confidence. Added error handling and fallback to notifications if auto-response fails.
+*   **2025-01-XX**: Added Railway cloud deployment support - migrated config to environment variables, implemented session file persistence, created Dockerfile and railway.toml, added deployment scripts and documentation for 24/7 cloud hosting. 

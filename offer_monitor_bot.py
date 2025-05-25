@@ -9,14 +9,32 @@ from message_parser import parse_message_for_offer
 
 # --- Configuration Loading ---
 def load_config():
+    cfg = {}
+    
+    # Try to load from environment variables first (for Railway deployment)
+    if os.getenv('API_ID'):
+        try:
+            cfg['api_id'] = int(os.getenv('API_ID'))
+            cfg['api_hash'] = os.getenv('API_HASH')
+            cfg['phone_number'] = os.getenv('PHONE_NUMBER')
+            cfg['target_group_id'] = int(os.getenv('TARGET_GROUP_ID'))
+            cfg['target_topic_id'] = int(os.getenv('TARGET_TOPIC_ID'))
+            cfg['notify_user_id'] = int(os.getenv('NOTIFY_USER_ID'))
+            cfg['session_name'] = os.getenv('SESSION_NAME', 'my_telegram_session')
+            print("✅ Configuration loaded from environment variables")
+            return cfg
+        except (ValueError, TypeError) as e:
+            print(f"🔴 [CRITICAL] Error parsing environment variables: {e}")
+            exit(1)
+    
+    # Fallback to config.ini for local development
     parser = configparser.ConfigParser()
-    # Ensure config.ini exists, if not, guide user to create from example
     if not os.path.exists('config.ini'):
-        print("🔴 [CRITICAL] config.ini not found! ")
+        print("🔴 [CRITICAL] config.ini not found and no environment variables set!")
         print("Please copy config.example.ini to config.ini and fill in your details.")
         exit(1)
+    
     parser.read('config.ini')
-    cfg = {}
     try:
         cfg['api_id'] = parser.getint('telegram_credentials', 'api_id')
         cfg['api_hash'] = parser.get('telegram_credentials', 'api_hash')
@@ -33,10 +51,12 @@ def load_config():
     
     # Validate that placeholder values have been changed
     if cfg['api_id'] == 'YOUR_API_ID_HERE' or \
-       str(cfg['target_group_id']) == 'GROUP_ID_OF_THE_TARGET_CHAT': # Check one example
+       str(cfg['target_group_id']) == 'GROUP_ID_OF_THE_TARGET_CHAT':
         print("🔴 [CRITICAL] Placeholder values found in config.ini.")
         print("Please replace all YOUR_..._HERE placeholders with your actual values.")
         exit(1)
+    
+    print("✅ Configuration loaded from config.ini")
     return cfg
 
 config = load_config()
@@ -75,6 +95,15 @@ SESSION_NAME = config['session_name']
 TARGET_GROUP_ID = config['target_group_id']
 TARGET_TOPIC_ID = config['target_topic_id']
 NOTIFY_USER_ID = config['notify_user_id']
+
+# Create sessions directory if it doesn't exist (for cloud deployment)
+sessions_dir = 'sessions'
+if not os.path.exists(sessions_dir):
+    os.makedirs(sessions_dir)
+    logger.info(f"Created sessions directory: {sessions_dir}")
+
+# Use sessions directory for session file
+session_path = os.path.join(sessions_dir, SESSION_NAME)
 
 async def run_listener(client: TelegramClient):
     logger.info(f"Listening to Group ID: {TARGET_GROUP_ID}, specifically for Topic ID: {TARGET_TOPIC_ID}")
@@ -116,38 +145,61 @@ async def run_listener(client: TelegramClient):
                 amount_rub = parsed_offer.get("amount_rub", "N/A")
                 original_msg_text = parsed_offer.get("original_message", "Error fetching original message.")
 
-                # Construct deep link to the message if possible
-                # Format: https://t.me/c/CHAT_ID/MSG_ID (CHAT_ID without -100 prefix)
-                # Or for groups with username: https://t.me/GROUP_USERNAME/MSG_ID
-                # This requires knowing if the group is public/has a username, or its specific chat_id structure.
-                # For now, we'll skip the deep link and focus on the text.
-                
-                # Try to get a link to the message
-                msg_link = f"https://t.me/c/{str(message.chat_id).replace('-100', '')}/{message.id}"
-                # Check if chat has a username for a potentially more stable link
-                if hasattr(message.chat, 'username') and message.chat.username:
-                    msg_link = f"https://t.me/{message.chat.username}/{message.id}"
+                # Store sender information for potential auto-response
+                sender_id = sender.id if sender else None
+                sender_username = getattr(sender, 'username', None)
 
-                notification_lines = [
-                    "🔔 *New Exchange Offer Alert!* 🔔",
-                    "-------------------------------------",
-                    f"*Type*: {offer_type.replace('_', ' ').title()}",
-                    f"*Confidence*: {confidence.title()}",
-                    f"*GBP Amount*: {amount_gbp}",
-                    f"*RUB Amount*: {amount_rub}",
-                    "-------------------------------------",
-                    f"*Original Message (from {sender_name})*:",
-                    f"> {original_msg_text}",
-                    "-------------------------------------",
-                    f"Link to message: {msg_link}"
-                ]
-                notification_text = "\n".join(notification_lines)
-                
-                try:
-                    await client.send_message(NOTIFY_USER_ID, notification_text, parse_mode='md') # Using Markdown
-                    logger.info(f"Notification sent to User ID {NOTIFY_USER_ID} for message ID {message.id}.")
-                except Exception as e:
-                    logger.error(f"Failed to send notification message: {e}")
+                # Check if this is a ruble buying offer that should trigger auto-response
+                should_auto_respond = (offer_type == "counterparty_buys_rub" and 
+                                     confidence in ["high", "medium"] and 
+                                     sender_id is not None)
+
+                if should_auto_respond:
+                    # Send auto-response to the person looking to buy rubles
+                    auto_response_text = "Привет, если рубли еще нужны, скажи пожалуйста куда перевести, в течении часа переведу"
+                    
+                    try:
+                        await client.send_message(sender_id, auto_response_text)
+                        logger.info(f"Auto-response sent to {sender_name} (ID: {sender_id}) for ruble buying offer.")
+                    except Exception as e:
+                        logger.error(f"Failed to send auto-response to {sender_name} (ID: {sender_id}): {e}")
+                        # If auto-response fails, fall back to notification to bot owner
+                        should_auto_respond = False
+
+                # If not auto-responding or auto-response failed, send notification to bot owner
+                if not should_auto_respond:
+                    # Construct deep link to the message if possible
+                    # Format: https://t.me/c/CHAT_ID/MSG_ID (CHAT_ID without -100 prefix)
+                    # Or for groups with username: https://t.me/GROUP_USERNAME/MSG_ID
+                    # This requires knowing if the group is public/has a username, or its specific chat_id structure.
+                    # For now, we'll skip the deep link and focus on the text.
+                    
+                    # Try to get a link to the message
+                    msg_link = f"https://t.me/c/{str(message.chat_id).replace('-100', '')}/{message.id}"
+                    # Check if chat has a username for a potentially more stable link
+                    if hasattr(message.chat, 'username') and message.chat.username:
+                        msg_link = f"https://t.me/{message.chat.username}/{message.id}"
+
+                    notification_lines = [
+                        "🔔 *New Exchange Offer Alert!* 🔔",
+                        "-------------------------------------",
+                        f"*Type*: {offer_type.replace('_', ' ').title()}",
+                        f"*Confidence*: {confidence.title()}",
+                        f"*GBP Amount*: {amount_gbp}",
+                        f"*RUB Amount*: {amount_rub}",
+                        "-------------------------------------",
+                        f"*Original Message (from {sender_name})*:",
+                        f"> {original_msg_text}",
+                        "-------------------------------------",
+                        f"Link to message: {msg_link}"
+                    ]
+                    notification_text = "\n".join(notification_lines)
+                    
+                    try:
+                        await client.send_message(NOTIFY_USER_ID, notification_text, parse_mode='md') # Using Markdown
+                        logger.info(f"Notification sent to User ID {NOTIFY_USER_ID} for message ID {message.id}.")
+                    except Exception as e:
+                        logger.error(f"Failed to send notification message: {e}")
             else:
                 logger.info("  Parser Result: No relevant offer identified by parser.")
             logger.info("==============================================")
@@ -157,44 +209,27 @@ async def run_listener(client: TelegramClient):
             logger.debug(f"--- IGNORING (No/Unknown Topic Context) --- Text: {message.text[:60]}...")
 
 async def main():
-    logger.info(f"Initializing Telegram client for session: {SESSION_NAME} (from config)")
-    client = TelegramClient(SESSION_NAME, API_ID, API_HASH)
+    logger.info(f"Initializing Telegram client for session: {session_path} (from config)")
+    client = TelegramClient(session_path, API_ID, API_HASH)
 
     try:
         logger.info("Connecting to Telegram...")
         await client.connect()
         if not await client.is_user_authorized():
-            logger.info("User not authorized. Attempting sign-in...")
-            try:
-                await client.send_code_request(PHONE_NUMBER)
-                code = input("Telegram sent a code. Please enter it: ")
-                await client.sign_in(PHONE_NUMBER, code)
-            except errors.SessionPasswordNeededError:
-                password = input("2FA password needed: ")
-                await client.sign_in(password=password)
-            if not await client.is_user_authorized():
-                logger.error("Still not authorized. Exiting.")
-                return
-            logger.info("Re-authorized successfully.")
+            logger.info("User not authorized. For cloud deployment, session must be pre-authorized.")
+            logger.error("Session not authorized. Please run locally first to authorize, then deploy.")
+            return
         else:
             logger.info("User is already authorized.")
 
         me = await client.get_me()
         logger.info(f"Successfully connected as: {me.first_name} {me.last_name or ''} (@{me.username or ''})")
         
-        # Start the event listener (passing the initialized client)
-        # The listener will now run indefinitely using client.run_until_disconnected() internally within its own logic if needed,
-        # but here we attach handlers and then keep main alive.
-        await run_listener(client) # Call the function that sets up the event handler
+        # Start the event listener
+        await run_listener(client)
         logger.info("Event listener started. Running until disconnected...")
         await client.run_until_disconnected()
 
-    except errors.RpcError as e:
-        logger.error(f"Telegram API RPC Error: {e} (Type: {type(e)})")
-    except ConnectionError as e:
-        logger.error(f"Connection Error: {e}. Check your internet connection.")
-    except KeyboardInterrupt:
-        logger.info("Listener stopped by user (Ctrl+C).")
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {e}")
     finally:
