@@ -10,12 +10,16 @@ __pycache__
 .Python
 .venv
 venv/
+env/
 
-# Local development
+# Local files
 config.ini
 *.log
 sessions/
 session_base64.txt
+env_vars.json
+bot.pid
+bot_console.log
 
 # Documentation
 *.md
@@ -24,4 +28,12 @@ project_milestones.md
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# Scripts
+*.sh 
