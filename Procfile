@@ -1,0 +1,1 @@
+worker: python offer_monitor_bot.py 
