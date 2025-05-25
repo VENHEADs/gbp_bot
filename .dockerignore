@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv/
+
+# Local development
+config.ini
+*.log
+sessions/
+session_base64.txt
+
+# Documentation
+*.md
+documentation.md
+project_milestones.md
+
+# OS
+.DS_Store
+Thumbs.db 
