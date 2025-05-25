@@ -18,6 +18,10 @@ session_base64.txt
 
 # Log files
 *.log
+bot_console.log
+
+# Process management
+bot.pid
 
 # OS generated files
 .DS_Store
