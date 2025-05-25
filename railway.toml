@@ -2,5 +2,5 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python offer_monitor_bot.py"
+startCommand = "python test.py"
 restartPolicyType = "always" 
