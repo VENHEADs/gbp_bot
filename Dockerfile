@@ -10,8 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY offer_monitor_bot.py .
 COPY message_parser.py .
 
-# Copy the authorized session file
-COPY sessions/my_telegram_session.session /app/sessions/my_telegram_session.session
+# Create sessions directory (empty)
+RUN mkdir -p /app/sessions
 
 # Run the bot
 CMD ["python", "offer_monitor_bot.py"] 
