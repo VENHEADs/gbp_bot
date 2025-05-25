@@ -59,6 +59,24 @@ def load_config():
     print("✅ Configuration loaded from config.ini")
     return cfg
 
+def setup_session_from_env():
+    """Decode base64 session from environment variable if available"""
+    session_b64 = os.getenv('SESSION_BASE64')
+    if session_b64:
+        try:
+            import base64
+            session_data = base64.b64decode(session_b64)
+            os.makedirs('sessions', exist_ok=True)
+            session_path = os.path.join('sessions', config['session_name'] + '.session')
+            with open(session_path, 'wb') as f:
+                f.write(session_data)
+            print("✅ Session restored from environment variable")
+            return True
+        except Exception as e:
+            print(f"🔴 Failed to restore session from environment: {e}")
+            return False
+    return False
+
 config = load_config()
 
 # --- Logging Setup ---
@@ -101,6 +119,9 @@ sessions_dir = 'sessions'
 if not os.path.exists(sessions_dir):
     os.makedirs(sessions_dir)
     logger.info(f"Created sessions directory: {sessions_dir}")
+
+# Restore session from environment if available
+setup_session_from_env()
 
 # Use sessions directory for session file
 session_path = os.path.join(sessions_dir, SESSION_NAME)
@@ -209,21 +230,36 @@ async def run_listener(client: TelegramClient):
             logger.debug(f"--- IGNORING (No/Unknown Topic Context) --- Text: {message.text[:60]}...")
 
 async def main():
-    logger.info(f"Initializing Telegram client for session: {session_path} (from config)")
     client = TelegramClient(session_path, API_ID, API_HASH)
 
     try:
-        logger.info("Connecting to Telegram...")
         await client.connect()
         if not await client.is_user_authorized():
-            logger.info("User not authorized. For cloud deployment, session must be pre-authorized.")
-            logger.error("Session not authorized. Please run locally first to authorize, then deploy.")
-            return
+            # Check if running locally (config.ini exists) or in cloud (env vars)
+            is_local_run = os.path.exists('config.ini') and not os.getenv('API_ID')
+            
+            if is_local_run:
+                logger.info("User not authorized. Attempting sign-in...")
+                try:
+                    await client.send_code_request(PHONE_NUMBER)
+                    code = input("Telegram sent a code. Please enter it: ")
+                    await client.sign_in(PHONE_NUMBER, code)
+                except errors.SessionPasswordNeededError:
+                    password = input("2FA password needed: ")
+                    await client.sign_in(password=password)
+                
+                if not await client.is_user_authorized():
+                    logger.error("Still not authorized. Exiting.")
+                    return
+                logger.info("Re-authorized successfully.")
+            else:
+                logger.error("Session not authorized. Please check SESSION_BASE64 environment variable.")
+                return
         else:
             logger.info("User is already authorized.")
 
         me = await client.get_me()
-        logger.info(f"Successfully connected as: {me.first_name} {me.last_name or ''} (@{me.username or ''})")
+        logger.info(f"Successfully connected as: {me.first_name}")
         
         # Start the event listener
         await run_listener(client)
@@ -234,9 +270,7 @@ async def main():
         logger.exception(f"An unexpected error occurred: {e}")
     finally:
         if client.is_connected():
-            logger.info("Disconnecting client...")
             await client.disconnect()
-            logger.info("Client disconnected.")
 
 if __name__ == '__main__':
     # The initial check for placeholder API_ID etc. is now done in load_config()
